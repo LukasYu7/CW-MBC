@@ -17,7 +17,6 @@ export default function Home() {
   const [query,setQuery] = useState('');
   const [enabled,setEnabled] = useState<Record<Category,boolean>>({personal:true,management:true,corporate:true});
   const [selected,setSelected] = useState<Building|null>(null);
-  const [listOpen,setListOpen] = useState(false);
   const [status,setStatus] = useState('데이터를 불러오는 중');
   const [missingKey,setMissingKey] = useState(true);
   const [detailPosition,setDetailPosition] = useState<{left:number;top:number}|null>(null);
@@ -43,7 +42,7 @@ export default function Home() {
   const counts = useMemo(()=>buildings.reduce((acc,b)=>({...acc,[b.category]:acc[b.category]+1}),{personal:0,management:0,corporate:0}),[buildings]);
 
   const showBuilding=(building:Building,nearPointer=true)=>{
-    setSelected(building);setListOpen(false);
+    setSelected(building);
     const area=mapAreaRef.current;
     const pointer=nearPointer?lastPointer.current:null;
     if(!area||!pointer){setDetailPosition(null);return}
@@ -99,16 +98,16 @@ export default function Home() {
   return <main className="app-shell">
     <aside className="sidebar">
       <div className="search-wrap">
-        <label className="search"><span>⌕</span><input value={query} onChange={e=>{setQuery(e.target.value);setListOpen(true)}} onFocus={()=>setListOpen(true)} placeholder="건물명 또는 주소 검색"/><button onClick={()=>{setQuery('');setListOpen(false)}} aria-label="검색어 지우기">{query?'×':''}</button></label>
-        {listOpen && <div className="result-list"><div className="result-head"><span>검색 결과</span><b>{filtered.length}</b></div>{filtered.map(b=><button key={b.id} onClick={()=>focusBuilding(b)}><i style={{background:categoryMeta[b.category].color}}/><span><strong>{b.name}</strong><small>{b.address}</small></span></button>)}{!filtered.length&&<p>일치하는 자산이 없습니다.</p>}</div>}
+        <label className="search"><span>⌕</span><input value={query} onChange={e=>setQuery(e.target.value)} placeholder="건물명 또는 주소 검색"/><button onClick={()=>setQuery('')} aria-label="검색어 지우기">{query?'×':''}</button></label>
       </div>
       <div className="legend">{(['personal','management','corporate'] as Category[]).map(category=><button className={enabled[category]?'':'off'} key={category} onClick={()=>toggle(category)}><i className="dot" style={{background:categoryMeta[category].color,color:categoryMeta[category].color}}/>{categoryMeta[category].label}<b>{counts[category]}</b></button>)}</div>
+      <div className="asset-list"><div className="asset-list-head"><span>{query?'검색 결과':'자산 목록'}</span><b>{filtered.length}</b></div><div className="asset-list-scroll">{filtered.map(b=><button className={selected?.id===b.id?'active':''} key={b.id} onClick={()=>focusBuilding(b)} aria-label={`${b.name} 지도에서 보기`}><i style={{background:categoryMeta[b.category].color}}/><span><strong>{b.name}</strong><small>{b.address}</small></span><em>›</em></button>)}{!filtered.length&&<p>일치하는 자산이 없습니다.</p>}</div></div>
       <footer>데이터 기준 2026. 08. 31.</footer>
     </aside>
     <section className="map-area" ref={mapAreaRef} onPointerDownCapture={event=>{const rect=event.currentTarget.getBoundingClientRect();lastPointer.current={x:event.clientX-rect.left,y:event.clientY-rect.top}}} aria-label="오피스 자산 지도">
       <div className="map-fallback"><span>SEOUL</span><i/><b>Gangnam · Seocho</b></div><div id="map" ref={mapNode}/>
       <div className="map-status"><i/>{status}</div>
-      {missingKey && buildings.length>0 && <div className="setup-card"><span>MAP SETUP</span><strong>네이버 지도 연결이 필요합니다</strong><p><code>public/config.js</code>에 발급받은 Client ID를 입력하면 48개 주소가 자동으로 지도에 표시됩니다.</p><button onClick={()=>setListOpen(true)}>목록으로 먼저 보기</button></div>}
+      {missingKey && buildings.length>0 && <div className="setup-card"><span>MAP SETUP</span><strong>네이버 지도 연결이 필요합니다</strong><p><code>public/config.js</code>에 발급받은 Client ID를 입력하면 48개 주소가 자동으로 지도에 표시됩니다.</p></div>}
       {selected&&<article className="detail-card" style={detailPosition?{left:detailPosition.left,top:detailPosition.top,right:'auto',bottom:'auto'}:undefined}>
         <button className="close" onClick={()=>setSelected(null)} aria-label="상세 닫기">×</button><div className="detail-type"><i style={{background:categoryMeta[selected.category].color}}/>{categoryMeta[selected.category].label}</div><h2>{selected.name}</h2><p className="address">{selected.address}</p>
         <dl><div><dt>소유주</dt><dd>{selected.owner}</dd></div><div><dt>대지면적</dt><dd>{formatArea(selected.landArea)}</dd></div><div><dt>연면적</dt><dd>{formatArea(selected.floorArea)}</dd></div><div><dt>사용승인</dt><dd>{selected.approvalDate}</dd></div></dl>
