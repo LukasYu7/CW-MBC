@@ -23,6 +23,7 @@ export default function Home() {
   const mapNode = useRef<HTMLDivElement>(null);
   const mapAreaRef = useRef<HTMLElement>(null);
   const lastPointer = useRef<{x:number;y:number}|null>(null);
+  const focusTimer = useRef<ReturnType<typeof setTimeout>|null>(null);
   const mapRef = useRef<any>(null);
   const markerRefs = useRef<Map<number,{point:any;label:any}>>(new Map());
 
@@ -41,16 +42,18 @@ export default function Home() {
   const filtered = useMemo(()=>buildings.filter(b=>enabled[b.category] && (!query.trim() || `${b.name} ${b.address} ${b.owner}`.toLowerCase().includes(query.trim().toLowerCase()))),[buildings,enabled,query]);
   const counts = useMemo(()=>buildings.reduce((acc,b)=>({...acc,[b.category]:acc[b.category]+1}),{personal:0,management:0,corporate:0}),[buildings]);
 
-  const showBuilding=(building:Building,nearPointer=true)=>{
-    setSelected(building);
+  const positionDetailNear=(pointer:{x:number;y:number}|null)=>{
     const area=mapAreaRef.current;
-    const pointer=nearPointer?lastPointer.current:null;
     if(!area||!pointer){setDetailPosition(null);return}
     const width=Math.min(390,area.clientWidth-36),estimatedHeight=Math.min(430,area.clientHeight-36),gap=16,margin=18;
     let left=pointer.x+gap,top=pointer.y+gap;
     if(left+width>area.clientWidth-margin)left=pointer.x-width-gap;
     if(top+estimatedHeight>area.clientHeight-margin)top=pointer.y-estimatedHeight-gap;
     setDetailPosition({left:Math.max(margin,left),top:Math.max(margin,top)});
+  };
+  const showBuilding=(building:Building,nearPointer=true)=>{
+    setSelected(building);
+    positionDetailNear(nearPointer?lastPointer.current:null);
   };
 
   useEffect(()=>{
@@ -95,9 +98,18 @@ export default function Home() {
   const focusBuilding=(building:Building)=>{
     const markers=markerRefs.current.get(building.id);
     if(markers&&mapRef.current){
+      if(focusTimer.current)clearTimeout(focusTimer.current);
+      setSelected(null);
+      setDetailPosition(null);
       const position=markers.point.getPosition();
       mapRef.current.setZoom(17,false);
       mapRef.current.setCenter(position);
+      focusTimer.current=setTimeout(()=>{
+        const offset=mapRef.current?.getProjection().fromCoordToOffset(position);
+        setSelected(building);
+        positionDetailNear(offset?{x:offset.x,y:offset.y}:null);
+      },320);
+      return;
     }
     showBuilding(building,false);
   };
