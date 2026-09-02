@@ -92,7 +92,15 @@ export default function Home() {
     });
   },[filtered]);
 
-  const focusBuilding=(building:Building)=>{showBuilding(building,false);const markers=markerRefs.current.get(building.id);if(markers&&mapRef.current){mapRef.current.panTo(markers.point.getPosition());mapRef.current.setZoom(17)}};
+  const focusBuilding=(building:Building)=>{
+    const markers=markerRefs.current.get(building.id);
+    if(markers&&mapRef.current){
+      const position=markers.point.getPosition();
+      mapRef.current.setZoom(17,false);
+      mapRef.current.setCenter(position);
+    }
+    showBuilding(building,false);
+  };
   const toggle=(category:Category)=>setEnabled(v=>({...v,[category]:!v[category]}));
 
   return <main className="app-shell">
