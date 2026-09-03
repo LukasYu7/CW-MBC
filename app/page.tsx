@@ -7,7 +7,7 @@ import { fromDatabase, type Building, type Category } from '../lib/buildings';
 declare global { interface Window { naver:any; __naverMapReady?:()=>void } }
 
 const categoryMeta:Record<Category,{label:string;color:string}> = {
-  personal:{label:'개인 소유',color:'#e35555'}, management:{label:'자산운용사',color:'#3277cf'}, corporate:{label:'기타 법인',color:'#e4aa2b'},
+  personal:{label:'개인',color:'#e35555'}, management:{label:'자산운용사',color:'#3277cf'}, corporate:{label:'기타 법인',color:'#e4aa2b'},
 };
 const escapeHtml = (value:string) => value.replace(/[&<>'"]/g, char => ({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[char] || char));
 const formatArea = (value:number) => value ? `${new Intl.NumberFormat('ko-KR',{maximumFractionDigits:0}).format(value)}평` : '확인 필요';

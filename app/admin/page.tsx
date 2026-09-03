@@ -6,7 +6,7 @@ import { getSupabaseClient } from '../../lib/supabase';
 import { fromDatabase, toDatabase, type Building, type Category } from '../../lib/buildings';
 
 const emptyBuilding:Partial<Building>={name:'',address:'',owner:'',landArea:0,floorArea:0,approvalDate:'',note:'',category:'corporate',lat:null,lng:null,isPublic:true};
-const categoryLabel:Record<Category,string>={personal:'개인 소유',management:'자산운용사',corporate:'기타 법인'};
+const categoryLabel:Record<Category,string>={personal:'개인',management:'자산운용사',corporate:'기타 법인'};
 
 export default function AdminPage(){
   const [session,setSession]=useState<Session|null>(null);
@@ -73,7 +73,7 @@ export default function AdminPage(){
       <label className="wide">건물명<input value={editing.name??''} onChange={e=>setEditing({...editing,name:e.target.value})} required/></label>
       <label className="wide">주소<input value={editing.address??''} onChange={e=>setEditing({...editing,address:e.target.value})} required/></label>
       <label>소유주<input value={editing.owner??''} onChange={e=>setEditing({...editing,owner:e.target.value})} required/></label>
-      <label>구분<select value={editing.category} onChange={e=>setEditing({...editing,category:e.target.value as Category})}><option value="personal">개인 소유</option><option value="management">자산운용사</option><option value="corporate">기타 법인</option></select></label>
+      <label>구분<select value={editing.category} onChange={e=>setEditing({...editing,category:e.target.value as Category})}><option value="personal">개인</option><option value="management">자산운용사</option><option value="corporate">기타 법인</option></select></label>
       <label>대지면적(평)<input type="number" step="0.01" value={editing.landArea??0} onChange={e=>setEditing({...editing,landArea:Number(e.target.value)})}/></label>
       <label>연면적(평)<input type="number" step="0.01" value={editing.floorArea??0} onChange={e=>setEditing({...editing,floorArea:Number(e.target.value)})}/></label>
       <label>사용승인일<input type="date" value={editing.approvalDate??''} onChange={e=>setEditing({...editing,approvalDate:e.target.value})}/></label>
