@@ -19,7 +19,7 @@ export default function Home() {
   const [selected,setSelected] = useState<Building|null>(null);
   const [status,setStatus] = useState('데이터를 불러오는 중');
   const [missingKey,setMissingKey] = useState(true);
-  const [detailPosition,setDetailPosition] = useState<{left:number;top:number}|null>(null);
+  const [detailPosition,setDetailPosition] = useState<{left:number;top:number;maxHeight:number}|null>(null);
   const mapNode = useRef<HTMLDivElement>(null);
   const mapAreaRef = useRef<HTMLElement>(null);
   const lastPointer = useRef<{x:number;y:number}|null>(null);
@@ -45,11 +45,12 @@ export default function Home() {
   const positionDetailNear=(pointer:{x:number;y:number}|null)=>{
     const area=mapAreaRef.current;
     if(!area||!pointer){setDetailPosition(null);return}
-    const width=Math.min(390,area.clientWidth-36),estimatedHeight=Math.min(430,area.clientHeight-36),gap=16,margin=18;
-    let left=pointer.x+gap,top=pointer.y+gap;
+    const width=Math.min(390,area.clientWidth-36),gap=16,margin=18;
+    let left=pointer.x+gap;
     if(left+width>area.clientWidth-margin)left=pointer.x-width-gap;
-    if(top+estimatedHeight>area.clientHeight-margin)top=pointer.y-estimatedHeight-gap;
-    setDetailPosition({left:Math.max(margin,left),top:Math.max(margin,top)});
+    left=Math.max(margin,Math.min(left,area.clientWidth-width-margin));
+    const top=Math.max(margin,Math.min(pointer.y+gap,area.clientHeight-margin-150));
+    setDetailPosition({left,top,maxHeight:Math.max(150,area.clientHeight-top-margin)});
   };
   const showBuilding=(building:Building,nearPointer=true)=>{
     setSelected(building);
@@ -83,18 +84,6 @@ export default function Home() {
     if(window.naver?.maps?.Service) init(); else { window.__naverMapReady=init; const script=document.createElement('script'); script.src=`https://oapi.map.naver.com/openapi/v3/maps.js?ncpKeyId=${encodeURIComponent(clientId)}&submodules=geocoder&callback=__naverMapReady`; script.async=true; script.onerror=()=>setStatus('네이버 지도를 연결하지 못했습니다'); document.head.appendChild(script); }
   },[buildings.length]);
 
-  useEffect(()=>{
-    const map=mapRef.current; if(!map || !window.naver) return;
-    markerRefs.current.forEach(markers=>{markers.point?.setMap(null);markers.label?.setMap(null)}); markerRefs.current.clear();
-    filtered.filter(b=>b.lat&&b.lng).forEach(building=>{
-      const meta=categoryMeta[building.category];
-      const position=new window.naver.maps.LatLng(building.lat,building.lng);
-      const label=new window.naver.maps.Marker({map,position,clickable:false,icon:{content:`<div class="naver-label"><span>${escapeHtml(building.name.replace(/\n/g,' '))}</span></div>`,anchor:new window.naver.maps.Point(-12,18)}});
-      const point=new window.naver.maps.Marker({map,position,title:building.name,clickable:true,zIndex:200,icon:{path:window.naver.maps.SymbolPath.CIRCLE,radius:7,fillColor:meta.color,fillOpacity:1,strokeColor:'#ffffff',strokeWeight:3}});
-      window.naver.maps.Event.addListener(point,'click',()=>{showBuilding(building);map.panTo(point.getPosition())}); markerRefs.current.set(building.id,{point,label});
-    });
-  },[filtered]);
-
   const focusBuilding=(building:Building)=>{
     const markers=markerRefs.current.get(building.id);
     if(markers&&mapRef.current){
@@ -105,14 +94,26 @@ export default function Home() {
       mapRef.current.setZoom(17,false);
       mapRef.current.setCenter(position);
       focusTimer.current=setTimeout(()=>{
-        const offset=mapRef.current?.getProjection().fromCoordToOffset(position);
+        const area=mapAreaRef.current;
         setSelected(building);
-        positionDetailNear(offset?{x:offset.x,y:offset.y}:null);
+        positionDetailNear(area?{x:area.clientWidth/2,y:area.clientHeight/2}:null);
       },320);
       return;
     }
     showBuilding(building,false);
   };
+
+  useEffect(()=>{
+    const map=mapRef.current; if(!map || !window.naver) return;
+    markerRefs.current.forEach(markers=>{markers.point?.setMap(null);markers.label?.setMap(null)}); markerRefs.current.clear();
+    filtered.filter(b=>b.lat&&b.lng).forEach(building=>{
+      const meta=categoryMeta[building.category];
+      const position=new window.naver.maps.LatLng(building.lat,building.lng);
+      const label=new window.naver.maps.Marker({map,position,clickable:false,icon:{content:`<div class="naver-label"><span>${escapeHtml(building.name.replace(/\n/g,' '))}</span></div>`,anchor:new window.naver.maps.Point(-12,18)}});
+      const point=new window.naver.maps.Marker({map,position,title:building.name,clickable:true,zIndex:200,icon:{path:window.naver.maps.SymbolPath.CIRCLE,radius:7,fillColor:meta.color,fillOpacity:1,strokeColor:'#ffffff',strokeWeight:3}});
+      window.naver.maps.Event.addListener(point,'click',()=>focusBuilding(building)); markerRefs.current.set(building.id,{point,label});
+    });
+  },[filtered]);
   const toggle=(category:Category)=>setEnabled(v=>({...v,[category]:!v[category]}));
 
   return <main className="app-shell">
@@ -128,7 +129,7 @@ export default function Home() {
       <div className="map-fallback"><span>SEOUL</span><i/><b>Gangnam · Seocho</b></div><div id="map" ref={mapNode}/>
       <div className="map-status"><i/>{status}</div>
       {missingKey && buildings.length>0 && <div className="setup-card"><span>MAP SETUP</span><strong>네이버 지도 연결이 필요합니다</strong><p><code>public/config.js</code>에 발급받은 Client ID를 입력하면 48개 주소가 자동으로 지도에 표시됩니다.</p></div>}
-      {selected&&<article className="detail-card" style={detailPosition?{left:detailPosition.left,top:detailPosition.top,right:'auto',bottom:'auto'}:undefined}>
+      {selected&&<article className="detail-card" style={detailPosition?{left:detailPosition.left,top:detailPosition.top,maxHeight:detailPosition.maxHeight,right:'auto',bottom:'auto'}:undefined}>
         <button className="close" onClick={()=>setSelected(null)} aria-label="상세 닫기">×</button><div className="detail-type"><i style={{background:categoryMeta[selected.category].color}}/>{categoryMeta[selected.category].label}</div><h2>{selected.name}</h2><p className="address">{selected.address}</p>
         <dl><div><dt>소유주</dt><dd>{selected.owner}</dd></div><div><dt>대지면적</dt><dd>{formatArea(selected.landArea)}</dd></div><div><dt>연면적</dt><dd>{formatArea(selected.floorArea)}</dd></div><div><dt>사용승인</dt><dd>{selected.approvalDate}</dd></div></dl>
         {selected.note&&<div className="note"><span>NOTE</span><p>{selected.note}</p></div>}
