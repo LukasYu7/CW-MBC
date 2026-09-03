@@ -91,13 +91,13 @@ export default function Home() {
       setSelected(null);
       setDetailPosition(null);
       const position=markers.point.getPosition();
-      mapRef.current.setZoom(17,false);
-      mapRef.current.setCenter(position);
+      if(typeof mapRef.current.morph==='function')mapRef.current.morph(position,17,{duration:550,easing:'easeOutCubic'});
+      else mapRef.current.panTo(position,{duration:550,easing:'easeOutCubic'});
       focusTimer.current=setTimeout(()=>{
         const area=mapAreaRef.current;
         setSelected(building);
         positionDetailNear(area?{x:area.clientWidth/2,y:area.clientHeight/2}:null);
-      },320);
+      },620);
       return;
     }
     showBuilding(building,false);
