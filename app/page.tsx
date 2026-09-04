@@ -116,7 +116,10 @@ export default function Home() {
   },[filtered]);
   const toggle=(category:Category)=>setEnabled(v=>({...v,[category]:!v[category]}));
 
-  return <main className="app-shell">
+  return <main className="app-shell" onPointerDownCapture={event=>{
+    const target=event.target;
+    if(selected&&target instanceof Element&&!target.closest('.detail-card')&&!target.closest('.asset-list-scroll>button'))setSelected(null);
+  }}>
     <aside className="sidebar">
       <div className="search-wrap">
         <label className="search"><span>⌕</span><input value={query} onChange={e=>setQuery(e.target.value)} placeholder="건물명 또는 주소 검색"/><button onClick={()=>setQuery('')} aria-label="검색어 지우기">{query?'×':''}</button></label>
