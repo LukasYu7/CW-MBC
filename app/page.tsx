@@ -17,6 +17,7 @@ export default function Home() {
   const [query,setQuery] = useState('');
   const [enabled,setEnabled] = useState<Record<Category,boolean>>({personal:true,management:true,corporate:true});
   const [selected,setSelected] = useState<Building|null>(null);
+  const [mobilePanelOpen,setMobilePanelOpen] = useState(false);
   const [status,setStatus] = useState('데이터를 불러오는 중');
   const [missingKey,setMissingKey] = useState(true);
   const [detailPosition,setDetailPosition] = useState<{left:number;top:number;maxHeight:number}|null>(null);
@@ -115,17 +116,25 @@ export default function Home() {
     });
   },[filtered]);
   const toggle=(category:Category)=>setEnabled(v=>({...v,[category]:!v[category]}));
+  const selectFromList=(building:Building)=>{
+    setMobilePanelOpen(false);
+    setTimeout(()=>{
+      if(mapRef.current&&window.naver?.maps)window.naver.maps.Event.trigger(mapRef.current,'resize');
+      focusBuilding(building);
+    },0);
+  };
 
-  return <main className="app-shell" onPointerDownCapture={event=>{
+  return <main className={`app-shell${mobilePanelOpen?' mobile-panel-open':''}`} onPointerDownCapture={event=>{
     const target=event.target;
     if(selected&&target instanceof Element&&!target.closest('.detail-card')&&!target.closest('.asset-list-scroll>button'))setSelected(null);
   }}>
-    <aside className="sidebar">
+    <aside className={`sidebar${mobilePanelOpen?' mobile-open':''}`}>
+      <button className="mobile-panel-toggle" onClick={()=>setMobilePanelOpen(open=>!open)} aria-expanded={mobilePanelOpen}><span>자산 검색 · 목록</span><b>{filtered.length}</b><i>{mobilePanelOpen?'⌃':'⌄'}</i></button>
       <div className="search-wrap">
         <label className="search"><span>⌕</span><input value={query} onChange={e=>setQuery(e.target.value)} placeholder="건물명 또는 주소 검색"/><button onClick={()=>setQuery('')} aria-label="검색어 지우기">{query?'×':''}</button></label>
       </div>
       <div className="legend">{(['personal','management','corporate'] as Category[]).map(category=><button className={enabled[category]?'':'off'} key={category} onClick={()=>toggle(category)}><i className="dot" style={{background:categoryMeta[category].color,color:categoryMeta[category].color}}/>{categoryMeta[category].label}<b>{counts[category]}</b></button>)}</div>
-      <div className="asset-list"><div className="asset-list-head"><span>{query?'검색 결과':'자산 목록'}</span><b>{filtered.length}</b></div><div className="asset-list-scroll">{filtered.map(b=><button className={selected?.id===b.id?'active':''} key={b.id} onClick={()=>focusBuilding(b)} aria-label={`${b.name} 지도에서 보기`}><i style={{background:categoryMeta[b.category].color}}/><span><strong>{b.name}</strong><small>{b.address}</small></span><em>›</em></button>)}{!filtered.length&&<p>일치하는 자산이 없습니다.</p>}</div></div>
+      <div className="asset-list"><div className="asset-list-head"><span>{query?'검색 결과':'자산 목록'}</span><b>{filtered.length}</b></div><div className="asset-list-scroll">{filtered.map(b=><button className={selected?.id===b.id?'active':''} key={b.id} onClick={()=>selectFromList(b)} aria-label={`${b.name} 지도에서 보기`}><i style={{background:categoryMeta[b.category].color}}/><span><strong>{b.name}</strong><small>{b.address}</small></span><em>›</em></button>)}{!filtered.length&&<p>일치하는 자산이 없습니다.</p>}</div></div>
       <footer>데이터 기준 2026. 08. 31.</footer>
     </aside>
     <section className="map-area" ref={mapAreaRef} onPointerDownCapture={event=>{const rect=event.currentTarget.getBoundingClientRect();lastPointer.current={x:event.clientX-rect.left,y:event.clientY-rect.top}}} aria-label="오피스 자산 지도">
